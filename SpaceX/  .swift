@@ -26,6 +26,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var possibleAliens = ["alien", "alien2", "alien3"]
     
+    let playerCategory:UInt32 = 0x1 << 2
     let alienCategory:UInt32 = 0x1 << 1
     let photonTorpedoCategory:UInt32 = 0x1 << 0
     
@@ -48,13 +49,22 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         player = SKSpriteNode (imageNamed: "shuttle")
         player.position = CGPoint(x: 0, y: -300)
+        
+        player.physicsBody = SKPhysicsBody(rectangleOf: player.size)
+        player.physicsBody?.isDynamic = true
+
+        player.physicsBody?.categoryBitMask = playerCategory
+        player.physicsBody?.contactTestBitMask = alienCategory
+        player.physicsBody?.collisionBitMask = 0
+        player.physicsBody?.usesPreciseCollisionDetection = true
+        
         self.addChild(player)
         
         self.physicsWorld.gravity = CGVector(dx: 0, dy: 0)
         self.physicsWorld.contactDelegate = self
 
         scoreLabel = SKLabelNode(text: "Score: 0")
-        scoreLabel.position = CGPoint(x: 0, y: self.frame.size.height - 60)
+        scoreLabel.position = CGPoint(x: 0, y: self.frame.size.height/2 - 200)
         scoreLabel.fontName = "AmericanTypewriter-Bold"
         scoreLabel.fontSize = 36
         scoreLabel.fontColor = UIColor.white
@@ -91,6 +101,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         alien.physicsBody?.contactTestBitMask = photonTorpedoCategory
         alien.physicsBody?.collisionBitMask = 0
         
+        
         self.addChild(alien)
         
         let animationDuration:TimeInterval = 6
@@ -98,7 +109,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         var actionArray = [SKAction]()
         
         
-        actionArray.append(SKAction.move(to: CGPoint(x: position, y: -alien.size.height), duration: animationDuration))
+        actionArray.append(SKAction.move(to: CGPoint(x: position, y: -self.frame.width), duration: animationDuration))
+        //y: -alien.size.height
         actionArray.append(SKAction.removeFromParent())
         
         alien.run(SKAction.sequence(actionArray))
@@ -160,6 +172,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             torpedoDidCollideWithAlien(torpedoNode: firstBody.node as! SKSpriteNode, alienNode: secondBody.node as! SKSpriteNode)
         }
         
+        else if (firstBody.categoryBitMask & alienCategory ) != 0 && (secondBody.categoryBitMask & playerCategory) != 0 {
+            alienDidCollideWithPlayer(alienNode: firstBody.node as! SKSpriteNode, playerNode: secondBody.node as! SKSpriteNode)
+        }
+        
     }
     
     
@@ -180,6 +196,26 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         score += 5
+        
+        
+    }
+    
+    func alienDidCollideWithPlayer (alienNode:SKSpriteNode, playerNode:SKSpriteNode) {
+        
+        let explosion = SKEmitterNode(fileNamed: "Explosion")!
+        explosion.position = alienNode.position
+        self.addChild(explosion)
+        
+        self.run(SKAction.playSoundFileNamed("bom.mp3", waitForCompletion: false))
+        
+        alienNode.removeFromParent()
+        
+        
+        self.run(SKAction.wait(forDuration: 2)) {
+            explosion.removeFromParent()
+        }
+        
+        score -= 25
         
         
     }
